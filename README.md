@@ -1,4 +1,4 @@
-# Tech Journey Portfolio – CI/CD Automated Deployment
+# Portfolio – CI/CD Automated Deployment
 
 This repository contains my portfolio website with a complete CI/CD pipeline using:
 
