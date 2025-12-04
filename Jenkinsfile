@@ -2,15 +2,15 @@ pipeline {
     agent any
 
     environment {
-        IMAGE = "lakshmanan1996/techfiles"
-        TAG = "latest"
-        VM_USER = "azureuser"
-        VM_HOST = "YOUR_AZURE_PUBLIC_IP"
-        SSH_CRED = "azure-vm-ssh"
-        DOCKER_CRED = "dockerhub"
+        DOCKER_IMAGE = "lakshmanan1996/portfolio"
+        DOCKER_TAG = "latest"
+        EC2_USER = "ubuntu"
+        EC2_HOST = "20.2.219.98"
+        SSH_CREDENTIALS_ID = "jenkins-ssh-key-id"
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 git 'https://github.com/Lakshmanan1996/techfiles.git'
@@ -19,36 +19,38 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE:$TAG .'
+                sh """
+                docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                """
             }
         }
 
         stage('Login to DockerHub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: DOCKER_CRED,
-                    usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                        sh 'echo $PASS | docker login -u $USER --password-stdin'
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', 
+                usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    sh "echo $PASS | docker login -u $USER --password-stdin"
                 }
             }
         }
 
-        stage('Push Image') {
+        stage('Push to DockerHub') {
             steps {
-                sh 'docker push $IMAGE:$TAG'
+                sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
             }
         }
 
-        stage('Deploy to Azure VM') {
+        stage('Deploy to EC2') {
             steps {
-                sshagent([SSH_CRED]) {
-                    sh '''
-                        ssh -o StrictHostKeyChecking=no $VM_USER@$VM_HOST "
-                            docker pull $IMAGE:$TAG &&
-                            docker stop portfolio || true &&
-                            docker rm portfolio || true &&
-                            docker run -d --name portfolio -p 80:80 $IMAGE:$TAG
-                        "
-                    '''
+                sshagent([SSH_CREDENTIALS_ID]) {
+                    sh """
+                    ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
+                        docker pull ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        docker stop portfolio || true
+                        docker rm portfolio || true
+                        docker run -d --name portfolio -p 80:80 ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    '
+                    """
                 }
             }
         }
