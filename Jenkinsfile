@@ -5,7 +5,7 @@ pipeline {
     DOCKER_IMAGE = 'lakshmanan1996/portfolio:latest'
     DOCKERHUB = 'dockerhub-creds'
     SSH_CREDENTIALS = 'ec2-ssh-key'
-    EC2_HOST = 'EC2_PUBLIC_IP'
+    EC2_HOST = '18.61.163.155'
     EC2_USER = 'ubuntu'
   }
 
