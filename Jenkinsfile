@@ -1,7 +1,8 @@
 pipeline {
   agent any
+
   environment {
-    DOCKER_IMAGE = 'lakshmanan/portfolio:latest'
+    DOCKER_IMAGE = 'lakshmanan1996/portfolio:latest'
     DOCKERHUB = 'dockerhub-creds'
     SSH_CREDENTIALS = 'ec2-ssh-key'
     EC2_HOST = 'EC2_PUBLIC_IP'
@@ -9,7 +10,10 @@ pipeline {
   }
 
   stages {
-    stage('Checkout') { steps { checkout scm } }
+
+    stage('Checkout') {
+      steps { checkout scm }
+    }
 
     stage('Build') {
       steps {
