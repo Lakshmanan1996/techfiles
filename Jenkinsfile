@@ -2,15 +2,13 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "lakshmanan1996/portfolio"
-        DOCKER_TAG = "latest"
-        EC2_USER = "ubuntu"
-        EC2_HOST = "20.2.219.98"
-        SSH_CREDENTIALS_ID = "jenkins-ssh-key-id"
+        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials-id'
+        DOCKER_IMAGE = 'lakshmanan/portfolio:latest'
+        AZURE_VM = '20.2.219.98'
+        SSH_CREDENTIALS = 'azure-ssh-credentials-id'
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 git 'https://github.com/Lakshmanan1996/techfiles.git'
@@ -19,36 +17,31 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh """
-                docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
-                """
-            }
-        }
-
-        stage('Login to DockerHub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', 
-                usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh "echo $PASS | docker login -u $USER --password-stdin"
+                script {
+                    docker.build(DOCKER_IMAGE)
                 }
             }
         }
 
         stage('Push to DockerHub') {
             steps {
-                sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKERHUB_CREDENTIALS) {
+                        docker.image(DOCKER_IMAGE).push()
+                    }
+                }
             }
         }
 
-        stage('Deploy to EC2') {
+        stage('Deploy on Azure VM') {
             steps {
-                sshagent([SSH_CREDENTIALS_ID]) {
+                sshagent([SSH_CREDENTIALS]) {
                     sh """
-                    ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
-                        docker pull ${DOCKER_IMAGE}:${DOCKER_TAG}
-                        docker stop portfolio || true
-                        docker rm portfolio || true
-                        docker run -d --name portfolio -p 80:80 ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    ssh -o StrictHostKeyChecking=no azureuser@${AZURE_VM} '
+                        docker pull ${DOCKER_IMAGE} &&
+                        docker stop portfolio || true &&
+                        docker rm portfolio || true &&
+                        docker run -d --name portfolio -p 80:80 ${DOCKER_IMAGE}
                     '
                     """
                 }
